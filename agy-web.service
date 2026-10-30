@@ -1,0 +1,19 @@
+# Example systemd unit. Copy to /etc/systemd/system/agy-web.service and replace
+# YOUR_USER / paths. Secrets live in /home/YOUR_USER/agy-web/.env (see .env.example).
+[Unit]
+Description=Antigravity Web - mobile web UI for Google Antigravity (agy) conversations
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/agy-web
+EnvironmentFile=/home/YOUR_USER/agy-web/.env
+Environment=PYTHONUNBUFFERED=1
+# Bind to localhost only; expose it through Cloudflare Tunnel (or another reverse proxy with TLS)
+ExecStart=/home/YOUR_USER/agy-web/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8085
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+# Secrets & local config
+.env
+.agy_web_secret
+settings.json
+artifact_comments.json
+
+# Synced conversations & user uploads (private data!)
+pc_sync/
+uploads/
+.sync_state.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
