@@ -2776,7 +2776,7 @@
                 streamThoughts.push(evt.delta);
                 populateThinkingBox(details, streamThoughts, streamTools, true);
               } else if (evt.type === 'tool' && evt.tool) {
-                streamTools.push({ name: evt.tool });
+                streamTools.push({ name: evt.tool, args: evt.args || {} });
                 populateThinkingBox(details, streamThoughts, streamTools, true);
               } else if (evt.type === 'delta' && evt.delta) {
                 accumulatedText += evt.delta;
