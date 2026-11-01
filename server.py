@@ -35,6 +35,20 @@ from fastapi.staticfiles import StaticFiles
 # =====================================================================
 # CONFIGURATION
 # =====================================================================
+BASE_DIR = Path(__file__).parent.resolve()
+
+def _load_dotenv(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        os.environ[key.strip()] = val.strip().strip('"').strip("'")
+
+_load_dotenv(BASE_DIR / ".env")
+
 APP_TITLE = "Antigravity Web Pro"
 AGY_BIN = os.path.expanduser(os.getenv("AGY_BIN", "~/.local/bin/agy"))
 
@@ -55,7 +69,7 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 SETTINGS_FILE = Path(os.path.expanduser("~/agy-web/settings.json"))
 COMMENTS_FILE = Path(os.path.expanduser("~/agy-web/artifact_comments.json"))
 
-AUTH_PIN = os.getenv("AGY_WEB_PIN", "1923")
+AUTH_PIN = os.getenv("AGY_WEB_PIN", "161543")
 SECRET_KEY = os.getenv("AGY_WEB_SECRET", "agy-keremuysal-secret-key-2026-v1")
 VOICE_SERVER_URL = os.getenv("VOICE_SERVER_URL", "http://127.0.0.1:8000")
 
@@ -626,14 +640,65 @@ def find_conversation_paths(cid: str) -> tuple[Path, Path]:
 
 
 # =====================================================================
-# AUTH & BASIC SETTINGS ENDPOINTS
+# AUTH & BASIC SETTINGS ENDPOINTS (WITH BRUTE-FORCE RATE LIMITING)
 # =====================================================================
+FAILED_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+MAX_FAILED_ATTEMPTS = 5
+LOCKOUT_WINDOW_SECONDS = 900  # 15 minutes
+
+
+def get_client_ip(request: Request) -> str:
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def check_login_rate_limit(client_ip: str) -> None:
+    now = time.time()
+    attempts = [t for t in FAILED_LOGIN_ATTEMPTS.get(client_ip, []) if now - t < LOCKOUT_WINDOW_SECONDS]
+    FAILED_LOGIN_ATTEMPTS[client_ip] = attempts
+    if len(attempts) >= MAX_FAILED_ATTEMPTS:
+        remaining_mins = max(1, int((LOCKOUT_WINDOW_SECONDS - (now - attempts[0])) / 60))
+        raise HTTPException(
+            status_code=429,
+            detail=f"Çok fazla hatalı deneme! Güvenlik nedeniyle {remaining_mins} dakika boyunca kilitlendiniz.",
+        )
+
+
+def record_failed_login(client_ip: str) -> int:
+    now = time.time()
+    attempts = [t for t in FAILED_LOGIN_ATTEMPTS.get(client_ip, []) if now - t < LOCKOUT_WINDOW_SECONDS]
+    attempts.append(now)
+    FAILED_LOGIN_ATTEMPTS[client_ip] = attempts
+    return MAX_FAILED_ATTEMPTS - len(attempts)
+
+
+def record_successful_login(client_ip: str) -> None:
+    FAILED_LOGIN_ATTEMPTS.pop(client_ip, None)
+
+
 @app.post("/api/auth/login")
 async def login(request: Request):
+    client_ip = get_client_ip(request)
+    check_login_rate_limit(client_ip)
+
     data = await request.json()
     pin = str(data.get("pin", "")).strip()
     if pin != AUTH_PIN:
-        raise HTTPException(status_code=401, detail="Hatalı PIN / Şifre!")
+        remaining = record_failed_login(client_ip)
+        await asyncio.sleep(1.0)
+        if remaining > 0:
+            raise HTTPException(status_code=401, detail=f"Hatalı PIN / Şifre! Kalan deneme hakkı: {remaining}")
+        raise HTTPException(
+            status_code=429,
+            detail="Çok fazla hatalı deneme! Güvenlik nedeniyle 15 dakika boyunca kilitlendiniz.",
+        )
+
+    record_successful_login(client_ip)
     token = create_auth_token()
     resp = JSONResponse({"ok": True, "token": token})
     resp.set_cookie(key="agy_token", value=token, max_age=90 * 86400, httponly=True, samesite="lax")
