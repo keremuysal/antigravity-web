@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="color-scheme" content="light dark">
   <script>
   try {
@@ -10,6 +10,7 @@
   } catch {}
   </script>
   <meta name="theme-color" content="#131314">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Antigravity Pro — Kerem Uysal</title>
@@ -34,6 +35,11 @@
       &:has(> head > meta[name="color-scheme"][content="light"]) {
         color-scheme: light;
       }
+
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
 
       --bg-main: light-dark(#f8fafd, #131314);
       --bg-sidebar: light-dark(#f0f4f9, #1e1f20);
@@ -321,32 +327,123 @@
       height: 100%;
       min-width: 0;
       background: var(--bg-main);
+      position: relative;
     }
 
     .topbar {
-      min-height: 58px;
-      padding: 6px 12px;
+      padding: max(52px, calc(var(--sat) + 44px)) max(12px, var(--sar)) 8px max(12px, var(--sal));
+      background: var(--bg-surface);
       border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .topbar-row-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .topbar-left-group {
+      display: flex;
+      align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
       flex-shrink: 0;
     }
-    .topbar-left, .topbar-right {
+
+    .brand-pill {
       display: flex;
       align-items: center;
       gap: 6px;
-      flex-wrap: wrap;
+      user-select: none;
     }
+    .topbar-sparkle {
+      width: 20px;
+      height: 20px;
+    }
+    .topbar-brand-name {
+      font-weight: 700;
+      font-size: 0.98rem;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.2px;
+    }
+
+    .live-sync-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      animation: pulse 1.5s infinite;
+    }
+
+    .topbar-right-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .topbar-chips-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .topbar-chips-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    @media (min-width: 900px) {
+      .topbar {
+        padding: 8px 16px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 54px;
+      }
+      .topbar-row-header {
+        display: contents;
+      }
+      .topbar-left-group {
+        order: 1;
+      }
+      .topbar-chips-bar {
+        order: 2;
+        width: auto;
+        padding-bottom: 0;
+        flex: 1;
+        justify-content: flex-start;
+      }
+      .topbar-right-group {
+        order: 3;
+      }
+    }
+
     .icon-btn {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
       height: 36px;
       min-width: 36px;
-      padding: 0 8px;
+      padding: 0 10px;
       border-radius: 10px;
       display: inline-flex;
       align-items: center;
@@ -355,23 +452,27 @@
       cursor: pointer;
       font-size: 0.82rem;
       font-weight: 500;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
     }
     .icon-btn:hover { background: var(--bg-surface-hover); }
     .icon-btn.active-mode {
       border-color: #f59e0b;
       color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
     }
     .top-select {
       height: 36px;
-      padding: 0 8px;
+      padding: 0 10px;
       border-radius: 10px;
       border: 1px solid var(--border-color);
-      background: var(--bg-surface);
+      background: var(--bg-surface-hover);
       color: var(--text-primary);
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       font-weight: 500;
       outline: none;
-      max-width: 175px;
+      max-width: 185px;
+      flex-shrink: 0;
     }
 
     /* ================= MESSAGES STREAM ================= */
@@ -982,16 +1083,152 @@
     }
     .backdrop.show { display: block; }
 
+    .mobile-only { display: none !important; }
+
     @media (max-width: 860px) {
+      .mobile-only { display: inline-flex !important; }
       .sidebar {
         position: fixed;
         top: 0;
         left: 0;
         bottom: 0;
-        width: min(310px, 86vw);
+        width: min(320px, 86vw);
         transform: translateX(-100%);
+        padding-top: max(52px, calc(var(--sat) + 44px));
+        padding-bottom: max(12px, var(--sab));
+        padding-left: max(8px, var(--sal));
+        box-shadow: 10px 0 35px rgba(0,0,0,0.3);
       }
       .sidebar.open { transform: translateX(0); }
+    }
+
+    @media (max-width: 768px) {
+      /* Form inputs: enforce 16px to prevent iOS Safari auto-zoom on focus */
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+
+      /* Full width bottom sheet for system dialog */
+      dialog#system-dialog {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 90dvh !important;
+        max-height: 90dvh !important;
+        margin: auto 0 0 0 !important;
+        border-radius: 22px 22px 0 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        padding-bottom: max(16px, var(--sab)) !important;
+      }
+      .dialog-inner {
+        max-height: 90dvh;
+      }
+
+      /* Full width drawer for auxiliary pane on phones */
+      .aux-drawer {
+        width: 100vw;
+        max-width: 100vw;
+        border-left: none;
+        padding-top: max(52px, calc(var(--sat) + 44px));
+        padding-bottom: max(12px, var(--sab));
+        padding-left: max(8px, var(--sal));
+        padding-right: max(8px, var(--sar));
+      }
+      .aux-header {
+        padding: 10px 14px;
+      }
+      .aux-main-tabs {
+        padding: 0 4px;
+      }
+      .aux-main-tab {
+        padding: 10px 10px;
+        font-size: 0.8rem;
+      }
+
+      /* Composer box adjustments */
+      .composer-wrap {
+        padding: 6px 10px max(12px, var(--sab));
+      }
+      .composer-box {
+        padding: 6px 10px;
+        gap: 6px;
+        border-radius: 20px;
+      }
+      .composer-icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+      }
+      .send-btn {
+        width: 36px;
+        height: 36px;
+      }
+
+      /* Messages container & items */
+      .messages-container {
+        padding: 12px 10px 20px;
+      }
+      .turn-user {
+        max-width: 90%;
+        padding: 10px 14px;
+        font-size: 0.92rem;
+      }
+      .turn-assistant {
+        gap: 8px;
+      }
+      .assistant-avatar {
+        width: 24px;
+        height: 24px;
+      }
+      .md-content {
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+      .md-content pre {
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+      }
+      .autocomplete-popup {
+        left: 8px;
+        right: 8px;
+        bottom: calc(100% + 6px);
+        max-height: 200px;
+      }
+      .ac-item {
+        padding: 10px 12px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .empty-state {
+        padding: 24px 12px;
+      }
+      .empty-state h2 {
+        font-size: 1.45rem;
+      }
+      .empty-state p {
+        font-size: 0.86rem;
+        margin-bottom: 16px;
+      }
+      .quick-chips {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto;
+      }
+      .quick-chip {
+        width: 100%;
+        text-align: left;
+        padding: 12px 14px;
+        font-size: 0.86rem;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
     }
   </style>
 </head>
@@ -1040,6 +1277,7 @@
           <span>✨</span>
           <span>Yeni Sohbet</span>
         </button>
+        <button id="btn-close-sidebar" class="icon-btn mobile-only" title="Kapat" aria-label="Kapat">✕</button>
       </div>
       <div class="sidebar-filters">
         <input type="search" id="search-input" class="search-box" placeholder="Konuşmalarda veya kodlarda ara...">
@@ -1061,10 +1299,25 @@
     <!-- MAIN CHAT PANEL -->
     <main class="chat-main">
       <header class="topbar">
-        <div class="topbar-left">
-          <button id="btn-toggle-sidebar" class="icon-btn" title="Menü">☰</button>
+        <div class="topbar-row-header">
+          <div class="topbar-left-group">
+            <button id="btn-toggle-sidebar" class="icon-btn" title="Menü">☰</button>
+            <div class="brand-pill">
+              <img src="/static/icon.svg" alt="" class="topbar-sparkle">
+              <span class="topbar-brand-name">Antigravity</span>
+            </div>
+            <span id="live-sync-indicator" class="live-sync-badge" style="display:none">⚡ Canlı</span>
+          </div>
+          <div class="topbar-right-group">
+            <button id="btn-aux-pane" class="icon-btn" title="Yardımcı Panel (Artifacts, Diffs, Subagents, Terminal)">
+              🗂️ Panel (<span id="aux-badge-count">0</span>)
+            </button>
+            <button id="btn-theme" class="icon-btn" title="Temayı Değiştir">🌓</button>
+          </div>
+        </div>
+        <div class="topbar-chips-bar" id="topbar-chips-bar">
           <select id="workspace-select" class="top-select" title="Çalışma Klasörü (Project)">
-            <option value="">📁 Ana Dizin (~)</option>
+            <option value="/home/ubuntu">📁 Ubuntu (~)</option>
           </select>
           <select id="model-select" class="top-select" title="Model Seçimi">
             <option value="gemini-4-argon-high">Gemini 4 Argon (High)</option>
@@ -1088,12 +1341,6 @@
             <option value="gemini-3.8-flash-high">vs Gemini 3.8 Flash</option>
             <option value="gpt-oss-120b-medium">vs GPT-OSS 120B</option>
           </select>
-        </div>
-        <div class="topbar-right">
-          <button id="btn-aux-pane" class="icon-btn" title="Yardımcı Panel (Artifacts, Diffs, Subagents, Terminal)">
-            🗂️ Panel (<span id="aux-badge-count">0</span>)
-          </button>
-          <button id="btn-theme" class="icon-btn" title="Temayı Değiştir">🌓</button>
         </div>
       </header>
 
@@ -1427,6 +1674,22 @@
     });
 
     document.getElementById('btn-close-aux').addEventListener('click', closeMobileDrawers);
+    document.getElementById('btn-close-sidebar')?.addEventListener('click', closeMobileDrawers);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMobileDrawers();
+    });
+
+    function updateMobilePlaceholders() {
+      const isMobile = window.innerWidth <= 600;
+      if (isMobile) {
+        if (!promptInput.value) promptInput.placeholder = "Mesaj yazın... (/ veya @)";
+      } else {
+        if (!promptInput.value) promptInput.placeholder = "Mesaj yaz, '/' ile komut seç, '@' ile dosya/konuşma etiketle...";
+      }
+    }
+    window.addEventListener('resize', updateMobilePlaceholders);
+    updateMobilePlaceholders();
 
     document.getElementById('btn-battle-mode').addEventListener('click', () => {
       battleModeEnabled = !battleModeEnabled;
@@ -1435,13 +1698,42 @@
     });
 
     // =====================================================================
-    // 5. CONVERSATIONS & WORKSPACES LOADING
+    // 5. CONVERSATIONS, PERSISTENCE & LIVE AUTO-SYNC
     // =====================================================================
+    let lastConvSignature = '';
+    let liveSyncTimer = null;
+    let activeStreamThinkingBox = null;
+    const liveSyncIndicator = document.getElementById('live-sync-indicator');
+
+    function setActiveConversation(cid) {
+      activeConversationId = cid || null;
+      try {
+        if (activeConversationId) {
+          localStorage.setItem('agy_active_cid', activeConversationId);
+          history.replaceState(null, '', '#' + encodeURIComponent(activeConversationId));
+        } else {
+          localStorage.setItem('agy_active_cid', '__new__');
+          history.replaceState(null, '', window.location.pathname);
+        }
+      } catch {}
+    }
+
     async function initAppData() {
-      await Promise.all([
+      const hashCid = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
+      let savedCid = hashCid;
+      if (!savedCid) {
+        try { savedCid = localStorage.getItem('agy_active_cid') || ''; } catch {}
+      }
+      const [convs] = await Promise.all([
         loadConversations(),
         loadWorkspacesAndCommands()
       ]);
+      if (savedCid && savedCid !== '__new__') {
+        await openConversation(savedCid);
+      } else if (!savedCid && convs && convs.length > 0) {
+        await openConversation(convs[0].id);
+      }
+      startLiveAutoSync();
     }
 
     async function loadWorkspacesAndCommands() {
@@ -1480,8 +1772,12 @@
       try {
         const res = await apiFetch(`/api/conversations?${params}`);
         const data = await res.json();
-        renderConversationList(data.conversations || []);
-      } catch {}
+        const convs = data.conversations || [];
+        renderConversationList(convs);
+        return convs;
+      } catch {
+        return [];
+      }
     }
 
     function renderConversationList(convs) {
@@ -1545,10 +1841,105 @@
     });
 
     // =====================================================================
-    // 6. OPEN & RENDER CONVERSATION DETAIL
+    // 6. OPEN, RENDER & LIVE AUTO-SYNC CONVERSATION DETAIL
     // =====================================================================
+    function getConvSignature(data) {
+      if (!data) return '';
+      const turns = data.turns || [];
+      const lastTurn = turns[turns.length - 1] || {};
+      return JSON.stringify({
+        steps: data.step_count || 0,
+        turnsLen: turns.length,
+        lastRole: lastTurn.role || '',
+        lastContentLen: (lastTurn.content || '').length,
+        lastThoughtsLen: (lastTurn.thoughts || []).length,
+        lastToolsLen: (lastTurn.tool_calls || []).length,
+        artsLen: (data.artifacts || []).length,
+        diffsLen: (data.file_changes || []).length,
+        termsLen: (data.terminal_tasks || []).length,
+        subsLen: (data.subagents || []).length
+      });
+    }
+
+    function formatToolCallText(tc) {
+      if (!tc) return '🔧 tool';
+      const name = tc.name || tc.tool || 'tool';
+      const args = tc.args || {};
+      const base = (p) => String(p || '').replace(/\\/g, '/').split('/').pop() || p || '';
+
+      if (name === 'run_command') {
+        const sum = args.toolSummary || '';
+        const cmd = args.CommandLine || '';
+        const shortCmd = cmd.length > 65 ? cmd.slice(0, 65) + '…' : cmd;
+        if (sum && shortCmd) return `💻 ${sum}: ${shortCmd}`;
+        return `💻 ${sum || shortCmd || 'run_command'}`;
+      }
+      if (name === 'read_file' || name === 'view_file') {
+        const fn = base(args.Path || args.AbsolutePath);
+        const range = args.StartLine ? ` (${args.StartLine}-${args.EndLine || 'son'})` : '';
+        return `📖 read_file${fn ? ': ' + fn + range : ''}`;
+      }
+      if (name === 'edit_file' || name === 'replace_file_content' || name === 'multi_replace_file_content') {
+        const fn = base(args.Path || args.TargetFile);
+        return `✏️ ${name}${fn ? ': ' + fn : ''}`;
+      }
+      if (name === 'write_file' || name === 'write_to_file') {
+        const fn = base(args.Path || args.TargetFile);
+        return `📝 ${name}${fn ? ': ' + fn : ''}`;
+      }
+      if (name === 'search_web') {
+        return `🌐 search_web${args.query ? ': ' + args.query : ''}`;
+      }
+      if (name === 'invoke_subagent') {
+        return `🤖 invoke_subagent: ${args.Role || args.TypeName || ''}`;
+      }
+      return `🔧 ${name}`;
+    }
+
+    function populateThinkingBox(detailsEl, thoughts = [], tools = [], autoOpen = false) {
+      if (!detailsEl) return;
+      if (!thoughts.length && !tools.length) {
+        detailsEl.style.display = 'none';
+        return;
+      }
+      detailsEl.style.display = 'block';
+      if (autoOpen) detailsEl.open = true;
+
+      let summary = detailsEl.querySelector('summary');
+      if (!summary) {
+        summary = document.createElement('summary');
+        detailsEl.appendChild(summary);
+      }
+      const parts = [];
+      if (thoughts.length) parts.push(`${thoughts.length} düşünme adımı`);
+      if (tools.length) parts.push(`${tools.length} araç/betik çağrısı`);
+      summary.textContent = `✨ Düşünme Süreci & Araçlar (${parts.join(', ')})`;
+
+      let content = detailsEl.querySelector('.thinking-content');
+      if (!content) {
+        content = document.createElement('div');
+        content.className = 'thinking-content';
+        detailsEl.appendChild(content);
+      }
+      content.replaceChildren();
+      for (const t of thoughts) {
+        const d = document.createElement('div');
+        d.textContent = `💭 ${t}`;
+        content.appendChild(d);
+      }
+      for (const tc of tools) {
+        const pill = document.createElement('div');
+        pill.className = 'tool-pill';
+        pill.textContent = formatToolCallText(tc);
+        content.appendChild(pill);
+      }
+      if (autoOpen) {
+        content.scrollTop = content.scrollHeight;
+      }
+    }
+
     async function openConversation(cid) {
-      activeConversationId = cid;
+      setActiveConversation(cid);
       loadConversations();
       messagesInner.replaceChildren();
       const loading = document.createElement('p');
@@ -1560,27 +1951,127 @@
 
       try {
         const res = await apiFetch(`/api/conversations/${cid}`);
+        if (!res.ok) throw new Error('Not found');
         currentConvData = await res.json();
+        lastConvSignature = getConvSignature(currentConvData);
         await renderConversationDetail(currentConvData);
       } catch {
         loading.textContent = 'Konuşma yüklenirken hata oluştu.';
       }
     }
 
-    async function renderConversationDetail(data) {
+    async function renderConversationDetail(data, preserveState = null) {
+      const wasNearBottom = preserveState
+        ? preserveState.wasNearBottom
+        : true;
+      const prevScrollTop = preserveState ? preserveState.prevScrollTop : 0;
+      const openMap = preserveState ? preserveState.openMap : {};
+
       messagesInner.replaceChildren();
       const totalAux = (data.artifacts?.length || 0) + (data.file_changes?.length || 0) + (data.subagents?.length || 0);
       auxBadgeCount.textContent = String(totalAux);
 
-      for (const turn of data.turns || []) {
+      const turns = data.turns || [];
+      for (let i = 0; i < turns.length; i++) {
+        const turn = turns[i];
+        const isLastTurn = (i === turns.length - 1);
         if (turn.role === 'user') {
           appendUserBubble(turn.content, turn.media || [], data.id);
         } else {
-          await appendAssistantBubble(turn, data.id);
+          const isStillWorking = isLastTurn && !turn.content && ((turn.thoughts?.length || 0) > 0 || (turn.tool_calls?.length || 0) > 0);
+          const displayTurn = isStillWorking
+            ? Object.assign({}, turn, { content: '⏳ *Antigravity çalışıyor (Düşünme adımları ve çalıştırılan betikler canlı güncelleniyor)...*' })
+            : turn;
+          const { details } = await appendAssistantBubble(displayTurn, data.id);
+          if (details) {
+            if (i in openMap) {
+              details.open = openMap[i];
+            } else if (isStillWorking || (preserveState && isLastTurn && preserveState.autoOpenLast)) {
+              details.open = true;
+            }
+          }
         }
       }
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      if (auxDrawer.classList.contains('open')) renderAuxPane();
+
+      if (wasNearBottom) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } else {
+        messagesContainer.scrollTop = prevScrollTop;
+      }
+      if (auxDrawer.classList.contains('open')) {
+        const activeEl = document.activeElement;
+        if (!activeEl || !auxDrawer.contains(activeEl) || activeEl.tagName !== 'INPUT') {
+          renderAuxPane();
+        }
+      }
+    }
+
+    function startLiveAutoSync() {
+      if (liveSyncTimer) clearInterval(liveSyncTimer);
+      liveSyncTimer = setInterval(pollActiveConversation, 2000);
+    }
+
+    async function pollActiveConversation() {
+      if (!activeConversationId || !authToken) return;
+      try {
+        const res = await apiFetch(`/api/conversations/${activeConversationId}`);
+        if (!res.ok) return;
+        const freshData = await res.json();
+        const newSig = getConvSignature(freshData);
+
+        if (newSig !== lastConvSignature) {
+          if (liveSyncIndicator) liveSyncIndicator.style.display = 'inline-flex';
+          const prevTurns = currentConvData?.turns || [];
+          const prevLast = prevTurns[prevTurns.length - 1] || {};
+          const freshTurns = freshData.turns || [];
+          const freshLast = freshTurns[freshTurns.length - 1] || {};
+          const stepsGrew = (freshLast.thoughts?.length || 0) > (prevLast.thoughts?.length || 0) ||
+                            (freshLast.tool_calls?.length || 0) > (prevLast.tool_calls?.length || 0);
+
+          currentConvData = freshData;
+          lastConvSignature = newSig;
+
+          const totalAux = (freshData.artifacts?.length || 0) + (freshData.file_changes?.length || 0) + (freshData.subagents?.length || 0);
+          auxBadgeCount.textContent = String(totalAux);
+
+          if (isStreaming && activeStreamThinkingBox && freshLast.role === 'assistant') {
+            populateThinkingBox(
+              activeStreamThinkingBox,
+              freshLast.thoughts || [],
+              freshLast.tool_calls || [],
+              true
+            );
+            if (auxDrawer.classList.contains('open')) {
+              const activeEl = document.activeElement;
+              if (!activeEl || !auxDrawer.contains(activeEl) || activeEl.tagName !== 'INPUT') {
+                renderAuxPane();
+              }
+            }
+          } else if (!isStreaming) {
+            const wasNearBottom = (messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight) < 150;
+            const prevScrollTop = messagesContainer.scrollTop;
+            const openMap = {};
+            messagesInner.querySelectorAll('.turn-assistant').forEach((el, idx) => {
+              const d = el.querySelector('details.thinking-box');
+              if (d) openMap[idx] = d.open;
+            });
+            if (stepsGrew) {
+              delete openMap[freshTurns.length - 1];
+            }
+            await renderConversationDetail(freshData, {
+              wasNearBottom,
+              prevScrollTop,
+              openMap,
+              autoOpenLast: stepsGrew
+            });
+            loadConversations();
+          }
+        } else {
+          if (!isStreaming && liveSyncIndicator) {
+            liveSyncIndicator.style.display = 'none';
+          }
+        }
+      } catch {}
     }
 
     function appendUserBubble(text, mediaList = [], cid = '') {
@@ -1617,31 +2108,10 @@
 
       const thoughts = turn.thoughts || [];
       const tools = turn.tool_calls || [];
-      if (thoughts.length || tools.length) {
-        const details = document.createElement('details');
-        details.className = 'thinking-box';
-        const summary = document.createElement('summary');
-        const parts = [];
-        if (thoughts.length) parts.push(`${thoughts.length} düşünme adımı`);
-        if (tools.length) parts.push(`${tools.length} araç çağrısı`);
-        summary.textContent = `✨ Düşünme Süreci & Araçlar (${parts.join(', ')})`;
-
-        const content = document.createElement('div');
-        content.className = 'thinking-content';
-        for (const t of thoughts) {
-          const d = document.createElement('div');
-          d.textContent = `💭 ${t}`;
-          content.appendChild(d);
-        }
-        for (const tc of tools) {
-          const pill = document.createElement('div');
-          pill.className = 'tool-pill';
-          pill.textContent = `🔧 ${tc.name}`;
-          content.appendChild(pill);
-        }
-        details.append(summary, content);
-        body.appendChild(details);
-      }
+      const details = document.createElement('details');
+      details.className = 'thinking-box';
+      populateThinkingBox(details, thoughts, tools, false);
+      body.appendChild(details);
 
       const mdDiv = document.createElement('div');
       mdDiv.className = 'md-content';
@@ -1731,7 +2201,7 @@
 
       wrap.append(avatar, body);
       messagesInner.appendChild(wrap);
-      return { wrap, body, mdDiv, ttsBtn };
+      return { wrap, body, mdDiv, ttsBtn, details };
     }
 
     // =====================================================================
@@ -2144,7 +2614,7 @@
             promptInput.value = (promptInput.value ? promptInput.value + ' ' : '') + d.text;
           }
         } catch {}
-        promptInput.placeholder = "Mesaj yaz, '/' ile komut seç, '@' ile dosya/konuşma etiketle...";
+        updateMobilePlaceholders();
       }
     });
 
@@ -2180,9 +2650,11 @@
     // 11. CHAT STREAMING, ABORT & BATTLE MODE EXECUTION
     // =====================================================================
     document.getElementById('btn-new-chat').addEventListener('click', () => {
-      activeConversationId = null;
+      setActiveConversation(null);
       currentConvData = null;
+      lastConvSignature = '';
       auxBadgeCount.textContent = '0';
+      if (liveSyncIndicator) liveSyncIndicator.style.display = 'none';
       closeMobileDrawers();
       messagesInner.replaceChildren();
       const empty = document.createElement('div');
@@ -2245,20 +2717,24 @@
         return;
       }
 
-      const { mdDiv } = await appendAssistantBubble({
+      const { mdDiv, details } = await appendAssistantBubble({
         content: '⏳ *Antigravity düşünüyor...*',
         thoughts: [],
         tool_calls: []
       }, activeConversationId || '');
+      activeStreamThinkingBox = details;
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
       isStreaming = true;
+      if (liveSyncIndicator) liveSyncIndicator.style.display = 'inline-flex';
       currentStreamId = 'stream_' + Date.now();
       currentAbortController = new AbortController();
       sendBtn.textContent = '⏹️';
       sendBtn.classList.add('abort-mode');
 
       let accumulatedText = '';
+      const streamThoughts = [];
+      const streamTools = [];
 
       try {
         const res = await apiFetch('/api/chat/stream', {
@@ -2294,13 +2770,20 @@
             try {
               const evt = JSON.parse(jsonStr);
               if (evt.type === 'init' && evt.conversation_id) {
-                activeConversationId = evt.conversation_id;
+                setActiveConversation(evt.conversation_id);
+                loadConversations();
+              } else if (evt.type === 'thinking' && evt.delta) {
+                streamThoughts.push(evt.delta);
+                populateThinkingBox(details, streamThoughts, streamTools, true);
+              } else if (evt.type === 'tool' && evt.tool) {
+                streamTools.push({ name: evt.tool });
+                populateThinkingBox(details, streamThoughts, streamTools, true);
               } else if (evt.type === 'delta' && evt.delta) {
                 accumulatedText += evt.delta;
                 await renderMarkdownInto(mdDiv, accumulatedText);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
               } else if (evt.type === 'done') {
-                if (evt.conversation_id) activeConversationId = evt.conversation_id;
+                if (evt.conversation_id) setActiveConversation(evt.conversation_id);
                 if (evt.response && !accumulatedText) accumulatedText = evt.response;
                 await renderMarkdownInto(mdDiv, accumulatedText || 'Tamamlandı.');
                 loadConversations();
@@ -2318,10 +2801,14 @@
         }
       } finally {
         isStreaming = false;
+        activeStreamThinkingBox = null;
         currentStreamId = null;
         currentAbortController = null;
         sendBtn.textContent = '➤';
         sendBtn.classList.remove('abort-mode');
+        if (activeConversationId) {
+          setTimeout(pollActiveConversation, 400);
+        }
       }
     });
 
