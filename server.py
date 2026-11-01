@@ -19,7 +19,6 @@ import json
 import mimetypes
 import os
 import re
-import secrets
 import shutil
 import subprocess
 import time
@@ -29,30 +28,15 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Optional
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 # =====================================================================
-# CONFIGURATION (all secrets & host-specific values come from env / .env)
+# CONFIGURATION
 # =====================================================================
-def _load_dotenv(path: Path) -> None:
-    """Minimal .env loader (no extra dependency). Existing env vars win."""
-    if not path.exists():
-        return
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, val = line.split("=", 1)
-        os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
-
-
-BASE_DIR = Path(__file__).parent.resolve()
-_load_dotenv(BASE_DIR / ".env")
-
 APP_TITLE = "Antigravity Web Pro"
 AGY_BIN = os.path.expanduser(os.getenv("AGY_BIN", "~/.local/bin/agy"))
-HOME_DIR = os.path.expanduser("~")
 
 DEFAULT_DATA_DIR = (
     os.path.expanduser("~/.gemini/antigravity-cli")
@@ -62,56 +46,20 @@ DEFAULT_DATA_DIR = (
 ANTIGRAVITY_DATA_DIR = Path(os.getenv("ANTIGRAVITY_DATA_DIR", DEFAULT_DATA_DIR))
 UBUNTU_CONFIG_DIR = Path(os.path.expanduser("~/.gemini/config"))
 
-# Runtime data (sync, uploads, settings) lives next to the app unless overridden
-APP_DATA_DIR = Path(os.getenv("AGY_WEB_DATA_DIR", str(BASE_DIR)))
-
-PC_SYNC_DIR = Path(os.getenv("PC_SYNC_DIR", str(APP_DATA_DIR / "pc_sync")))
+PC_SYNC_DIR = Path(os.getenv("PC_SYNC_DIR", os.path.expanduser("~/agy-web/pc_sync")))
 PC_SYNC_DIR.mkdir(parents=True, exist_ok=True)
 
-UPLOADS_DIR = APP_DATA_DIR / "uploads"
+UPLOADS_DIR = Path(os.path.expanduser("~/agy-web/uploads"))
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-SETTINGS_FILE = APP_DATA_DIR / "settings.json"
-COMMENTS_FILE = APP_DATA_DIR / "artifact_comments.json"
+SETTINGS_FILE = Path(os.path.expanduser("~/agy-web/settings.json"))
+COMMENTS_FILE = Path(os.path.expanduser("~/agy-web/artifact_comments.json"))
 
-# --- Auth: PIN is mandatory, signing secret is generated & persisted if absent ---
-AUTH_PIN = os.getenv("AGY_WEB_PIN", "").strip()
-if len(AUTH_PIN) < 6:
-    raise RuntimeError(
-        "AGY_WEB_PIN must be set (min. 6 characters) in the environment or .env file. "
-        "This app can run shell commands on your server — use a strong PIN."
-    )
+AUTH_PIN = os.getenv("AGY_WEB_PIN", "1923")
+SECRET_KEY = os.getenv("AGY_WEB_SECRET", "agy-keremuysal-secret-key-2026-v1")
+VOICE_SERVER_URL = os.getenv("VOICE_SERVER_URL", "http://127.0.0.1:8000")
 
-
-def _load_or_create_secret() -> str:
-    env_secret = os.getenv("AGY_WEB_SECRET", "").strip()
-    if env_secret:
-        return env_secret
-    secret_file = APP_DATA_DIR / ".agy_web_secret"
-    if secret_file.exists():
-        return secret_file.read_text(encoding="utf-8").strip()
-    new_secret = secrets.token_hex(32)
-    secret_file.write_text(new_secret, encoding="utf-8")
-    try:
-        os.chmod(secret_file, 0o600)
-    except Exception:
-        pass
-    return new_secret
-
-
-SECRET_KEY = _load_or_create_secret()
-SESSION_DAYS = int(os.getenv("AGY_WEB_SESSION_DAYS", "30"))
-
-# Optional features
-VOICE_SERVER_URL = os.getenv("VOICE_SERVER_URL", "").strip()  # e.g. http://127.0.0.1:8000
-ENABLE_TERMINAL = os.getenv("AGY_WEB_ENABLE_TERMINAL", "false").lower() == "true"
-MONITORED_SERVICES = [s.strip() for s in os.getenv("AGY_WEB_SERVICES", "agy-web,cloudflared").split(",") if s.strip()]
-
-# Brute-force protection for the PIN login
-LOGIN_MAX_ATTEMPTS = 5
-LOGIN_WINDOW_SECONDS = 15 * 60
-_login_failures: dict[str, list[float]] = {}
-
+BASE_DIR = Path(__file__).parent.resolve()
 STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -144,8 +92,15 @@ SLASH_COMMANDS = [
     {"cmd": "/learn", "title": "Kalıcı Yetenek / Kural Öğren", "desc": "Çözülen karmaşık bir kurulumu gelecekteki görevler için kalıcı hale getirir."},
 ]
 
-# Same-origin app: no CORS middleware on purpose (prevents cross-site API calls).
-app = FastAPI(title=APP_TITLE, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title=APP_TITLE)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # =====================================================================
@@ -157,7 +112,7 @@ def load_settings() -> dict[str, Any]:
         "default_model": "gemini-4-argon-high",
         "default_effort": "high",
         "auto_tts": False,
-        "default_workspace": HOME_DIR,
+        "default_workspace": "/home/ubuntu",
     }
     if SETTINGS_FILE.exists():
         try:
@@ -176,8 +131,8 @@ def save_settings(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def create_auth_token() -> str:
-    exp = int(time.time()) + (SESSION_DAYS * 86400)
-    payload = f"owner:{exp}"
+    exp = int(time.time()) + (90 * 86400)
+    payload = f"kerem:{exp}"
     sig = hmac.new(SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}:{sig}"
 
@@ -217,6 +172,7 @@ async def require_auth(
 # =====================================================================
 # TRANSCRIPT, DIFF, SUBAGENT & METADATA PARSERS
 # =====================================================================
+SAFE_CID_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 TITLE_RE = re.compile(r'title\s*:\s*"((?:[^"\\]|\\.)*)"')
 TIME_RE = re.compile(r"seconds\s*:\s*(\d+)")
 USER_REQ_RE = re.compile(r"<USER_REQUEST>(.*?)</USER_REQUEST>", re.DOTALL)
@@ -653,6 +609,8 @@ def discover_all_conversations(include_subagents: bool = False) -> list[dict[str
 
 
 def find_conversation_paths(cid: str) -> tuple[Path, Path]:
+    if not cid or not SAFE_CID_RE.match(cid):
+        raise HTTPException(status_code=400, detail="Gecersiz konusma kimligi.")
     candidates = []
     for root in [ANTIGRAVITY_DATA_DIR, PC_SYNC_DIR]:
         bdir = root / "brain" / cid
@@ -672,30 +630,13 @@ def find_conversation_paths(cid: str) -> tuple[Path, Path]:
 # =====================================================================
 @app.post("/api/auth/login")
 async def login(request: Request):
-    client_ip = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "unknown")
-    now = time.time()
-    recent = [t for t in _login_failures.get(client_ip, []) if now - t < LOGIN_WINDOW_SECONDS]
-    _login_failures[client_ip] = recent
-    if len(recent) >= LOGIN_MAX_ATTEMPTS:
-        raise HTTPException(status_code=429, detail="Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin.")
-
     data = await request.json()
     pin = str(data.get("pin", "")).strip()
-    if not hmac.compare_digest(pin.encode(), AUTH_PIN.encode()):
-        recent.append(now)
-        _login_failures[client_ip] = recent
+    if pin != AUTH_PIN:
         raise HTTPException(status_code=401, detail="Hatalı PIN / Şifre!")
-    _login_failures.pop(client_ip, None)
     token = create_auth_token()
     resp = JSONResponse({"ok": True, "token": token})
-    resp.set_cookie(
-        key="agy_token",
-        value=token,
-        max_age=SESSION_DAYS * 86400,
-        httponly=True,
-        secure=True,
-        samesite="strict",
-    )
+    resp.set_cookie(key="agy_token", value=token, max_age=90 * 86400, httponly=True, samesite="lax")
     return resp
 
 
@@ -741,7 +682,7 @@ async def get_workspaces(_: bool = Depends(require_auth)):
 
 @app.get("/api/mentions")
 async def get_mentions(
-    workspace: str = Query(default=HOME_DIR),
+    workspace: str = Query(default="/home/ubuntu"),
     q: str = Query(default=""),
     _: bool = Depends(require_auth),
 ):
@@ -939,12 +880,7 @@ async def get_artifact(cid: str, filename: str, raw: bool = Query(default=False)
         if fpath.exists() and fpath.is_file():
             if raw or fpath.suffix.lower() in {".html", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".pdf"}:
                 mime, _ = mimetypes.guess_type(str(fpath))
-                headers = {}
-                if fpath.suffix.lower() == ".html":
-                    # Agent-generated HTML runs in an opaque-origin sandbox: it cannot read
-                    # the app's cookies/localStorage or call the API as the logged-in user.
-                    headers["Content-Security-Policy"] = "sandbox allow-scripts allow-forms allow-popups"
-                return FileResponse(fpath, media_type=mime or "text/html", headers=headers)
+                return FileResponse(fpath, media_type=mime or "text/html")
             if fpath.suffix.lower() in {".md", ".txt", ".py", ".json"}:
                 content = fpath.read_text(encoding="utf-8", errors="replace")
                 return {"name": safe_name, "type": "text", "content": content}
@@ -1111,7 +1047,7 @@ async def chat_stream(request: Request, _: bool = Depends(require_auth)):
     conversation_id = (body.get("conversation_id") or "").strip() or None
     model = (body.get("model") or "gemini-4-argon-high").strip()
     effort = (body.get("effort") or "high").strip()
-    workspace = (body.get("workspace") or HOME_DIR).strip()
+    workspace = (body.get("workspace") or "/home/ubuntu").strip()
     attachments = body.get("attachments") or []
     stream_id = body.get("stream_id") or uuid.uuid4().hex[:10]
 
@@ -1231,6 +1167,15 @@ async def chat_stream(request: Request, _: bool = Depends(require_auth)):
                     yield f"data: {json.dumps({'type': 'done', 'conversation_id': active_cid or res.get('conversation_id'), 'response': final_text, 'usage': usage})}\n\n"
 
             await proc.wait()
+            if proc.returncode != 0 and not full_reply_chunks:
+                stderr_data = b""
+                if proc.stderr:
+                    try:
+                        stderr_data = await proc.stderr.read()
+                    except Exception:
+                        pass
+                err_text = stderr_data.decode("utf-8", errors="replace").strip() or f"Islem {proc.returncode} hata koduyla kapandi."
+                yield f"data: {json.dumps({'type': 'error', 'error': err_text})}\n\n"
         finally:
             ACTIVE_PROCESSES.pop(stream_id, None)
 
@@ -1249,7 +1194,7 @@ async def chat_battle(request: Request, _: bool = Depends(require_auth)):
     model_a = (body.get("model_a") or "gemini-4-argon-high").strip()
     model_b = (body.get("model_b") or "claude-opus-5-5-high").strip()
     effort = (body.get("effort") or "high").strip()
-    workspace = (body.get("workspace") or HOME_DIR).strip()
+    workspace = (body.get("workspace") or "/home/ubuntu").strip()
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Mesaj boş olamaz.")
@@ -1335,7 +1280,7 @@ async def get_system_customizations(_: bool = Depends(require_auth)):
 @app.get("/api/system/automations")
 async def get_system_automations(_: bool = Depends(require_auth)):
     services = []
-    for svc in MONITORED_SERVICES:
+    for svc in ["agy-web", "antigravity-voice", "amazon-hunter", "cloudflared"]:
         try:
             res = subprocess.run(["systemctl", "is-active", svc], capture_output=True, text=True, timeout=3)
             state = res.stdout.strip() or "inactive"
@@ -1388,14 +1333,9 @@ async def create_system_automation(request: Request, _: bool = Depends(require_a
 
 @app.post("/api/terminal/exec")
 async def exec_terminal_command(request: Request, _: bool = Depends(require_auth)):
-    if not ENABLE_TERMINAL:
-        raise HTTPException(
-            status_code=403,
-            detail="Mini terminal kapalı. Açmak için .env içinde AGY_WEB_ENABLE_TERMINAL=true ayarlayın.",
-        )
     body = await request.json()
     command = (body.get("command") or "").strip()
-    cwd = (body.get("cwd") or HOME_DIR).strip()
+    cwd = (body.get("cwd") or "/home/ubuntu").strip()
     if not command:
         raise HTTPException(status_code=400, detail="Komut boş.")
     if not os.path.isdir(cwd):
@@ -1419,17 +1359,9 @@ async def exec_terminal_command(request: Request, _: bool = Depends(require_auth
 
 # =====================================================================
 # TURKISH VOICE BRIDGE (FASTER-WHISPER STT & ANTALIA-2 MINI TTS)
-# Optional: requires a voice server exposing /tts-only and /stt-only
-# (see extras/voice_endpoints.py). Disabled when VOICE_SERVER_URL is empty.
 # =====================================================================
-def _require_voice():
-    if not VOICE_SERVER_URL:
-        raise HTTPException(status_code=503, detail="Ses özelliği kapalı (VOICE_SERVER_URL ayarlanmamış).")
-
-
 @app.post("/api/voice/tts")
 async def voice_tts(request: Request, _: bool = Depends(require_auth)):
-    _require_voice()
     body = await request.json()
     text = (body.get("text") or "").strip()
     if not text:
@@ -1457,7 +1389,6 @@ async def voice_tts(request: Request, _: bool = Depends(require_auth)):
 
 @app.post("/api/voice/stt")
 async def voice_stt(request: Request, _: bool = Depends(require_auth)):
-    _require_voice()
     raw_pcm = await request.body()
     if len(raw_pcm) < 800:
         raise HTTPException(status_code=400, detail="Ses kaydı çok kısa.")
