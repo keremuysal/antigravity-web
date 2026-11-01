@@ -1141,10 +1141,12 @@ async def chat_stream(request: Request, _: bool = Depends(require_auth)):
                     if stype == "agent_response" and text_delta:
                         full_reply_chunks.append(text_delta)
                         yield f"data: {json.dumps({'type': 'delta', 'delta': text_delta})}\n\n"
-                    elif stype not in ("user_input", "system_message", "agent_response") and state == "ACTIVE":
-                        tool_info = {"name": stype, "state": state}
+                    elif (stype == "tool" or stype not in ("user_input", "system_message", "agent_response")) and state == "ACTIVE":
+                        t_name = su.get("tool_name") or (su.get("tool_info") or {}).get("name") or stype
+                        t_args = (su.get("tool_info") or {}).get("parameters", {}) if isinstance(su.get("tool_info"), dict) else {}
+                        tool_info = {"name": t_name, "args": t_args, "state": state}
                         collected_tools.append(tool_info)
-                        yield f"data: {json.dumps({'type': 'tool', 'tool': stype, 'state': state})}\n\n"
+                        yield f"data: {json.dumps({'type': 'tool', 'tool': t_name, 'args': t_args, 'state': state})}\n\n"
 
                 elif etype == "result":
                     res = evt.get("result", {})
